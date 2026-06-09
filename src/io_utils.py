@@ -5,6 +5,7 @@ import sys
 import os
 import json
 
+
 class Input_reader:
     def __init__(self):
         pass
@@ -16,6 +17,21 @@ class Input_reader:
             with open(file_path, 'r') as calling_json:
                 data = json.load(calling_json)
             print(data)
+            self.data = data
+
+        except FileNotFoundError:
+            print("File not found")
+        except json.JSONDecodeError:
+            print("Invalid JSON format")
+
+    def check_available_functions(self):
+
+        file_path = Path(__file__).parent / "../data/input/functions_definition.json"
+        try:
+            with open(file_path, 'r') as calling_json:
+                available_functions = json.load(calling_json)
+            print(available_functions)
+            self.available_functions = available_functions
 
         except FileNotFoundError:
             print("File not found")
@@ -26,3 +42,8 @@ class Input_reader:
 if __name__ == "__main__":
     input_reader = Input_reader()
     input_reader.read_input_out()
+
+    print(input_reader.data[0])
+    input_reader.check_available_functions()
+    print()
+    print(input_reader.available_functions[0])

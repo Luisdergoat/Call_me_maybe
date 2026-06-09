@@ -1,6 +1,6 @@
 VENV ?= .venv
 
-.PHONY: install run debug clean lint
+.PHONY: install run debug clean lint flake8 typecheck
 
 install:
 	uv venv $(VENV)
@@ -17,4 +17,10 @@ clean:
 
 lint:
 	$(VENV)/bin/uv run flake8
+	$(VENV)/bin/uv run mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
+
+flake8:
+	$(VENV)/bin/uv run flake8
+
+typecheck:
 	$(VENV)/bin/uv run mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
