@@ -1,8 +1,4 @@
 from pathlib import Path
-import numpy as np
-import pydantic as pd
-import sys
-import os
 import json
 
 
@@ -37,13 +33,3 @@ class Input_reader:
             print("File not found")
         except json.JSONDecodeError:
             print("Invalid JSON format")
-
-
-if __name__ == "__main__":
-    input_reader = Input_reader()
-    input_reader.read_input_out()
-
-    print(input_reader.data[0])
-    input_reader.check_available_functions()
-    print()
-    print(input_reader.available_functions[0])
