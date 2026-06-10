@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: luisunsold <luisunsold@student.42.fr>      +#+  +:+       +#+         #
+#    By: lunsold <lunsold@student.42heilbronn.de    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/02/10 00:00:00 by luunsold          #+#    #+#              #
-#    Updated: 2026/06/10 14:16:10 by luisunsold       ###   ########.fr        #
+#    Updated: 2026/06/10 14:26:55 by lunsold          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -54,7 +54,7 @@ $(VENV)/bin/activate:
 # Create requirements.txt if it doesn't exist
 requirements.txt:
 	@echo "$(BLUE)📝 Creating requirements.txt...$(RESET)"
-	@echo "numpy>=2.2.6" "pydantic>=2.10.0" "torch" "transformers" "huggingface_hub" "flake8" "mypy" > requirements.txt
+	@echo "numpy>=2.2.6\npydantic>=2.10.0\ntorch>=2.0.0\ntransformers>=4.30.0\nhuggingface_hub>=0.19.0\nflake8>=4.0.0\nmypy>=0.900" > requirements.txt
 	@echo "$(GREEN)✅ requirements.txt created!$(RESET)"
 	@echo "$(GREEN)✅ Dependencies installed successfully!$(RESET)"
 
