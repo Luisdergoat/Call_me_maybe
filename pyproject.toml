@@ -1,12 +1,14 @@
 [project]
-name = "llm-sdk"
+name = "call-me-maybe"
 version = "0.1.0"
-description = "LLM SDK for local model inference"
+description = "Function calling with constrained decoding"
 requires-python = ">=3.10"
 dependencies = [
     "torch>=2.0.0",
     "transformers>=4.40.0",
     "huggingface-hub>=0.20.0",
+    "numpy>=1.24.0",
+    "pydantic>=2.0.0",
 ]
 
 [build-system]

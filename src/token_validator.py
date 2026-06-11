@@ -1,103 +1,96 @@
+"""Constrained decoding utilities for JSON function call generation."""
 import json
+from typing import Dict, List, Optional
+
 import numpy as np
 
-
-def load_vocab(llm_model):
-    # wir laden das vobaluar aus der JSON Datei
-    vocab_path = llm_model.get_path_to_vocab_file()
-
-    with open(vocab_path, 'r') as f:
-        vocab = json.load(f)
-
-    # vocab ist ein Dict: "Token_string": token_id, ...
-    # muss umgekehrt werden zu token_id: "Token_string"
-    id_to_token = {v: k for k, v in vocab.items()}
-
-    return id_to_token
+_token_text_cache: Dict[int, str] = {}
 
 
-def matches_available_functions(text, functions_def):
-    # Check ob der Text zu einer Funktion passt
-    try:
-        # Suche nach namen
-        if '"name"' in text:
-            # Extrahiere was nach "name" kommt
-            parts = text.split('"name"')
-            if len(parts) > 1:
-                after_name = parts[1]
-
-                # Suche nach dem nächsten Anführungszeichen
-                if '"' in after_name:
-                    function_name_part = after_name.split('"')[1]
-
-                    # Vergleiche mit verfügbaren Funktionen
-                    available_names = [func['name'] for func in functions_def]
-                    # Prefix check 
-                    for name in available_names:
-                        if name.startswith(function_name_part):
-                            return True
-                if function_name_part in available_names:
-                    return True
-    except Exception as e:
-        print(f"Error checking function match: {e}")
-        pass
-    # Wenn wir nicht sicher sind lassen wir es weiter laufen
-    return True
+def _get_token_text(token_id: int, llm_model) -> str:
+    """Decode a single token to its string representation, with caching."""
+    if token_id not in _token_text_cache:
+        _token_text_cache[token_id] = llm_model.decode([token_id])
+    return _token_text_cache[token_id]
 
 
-def is_valid_json_prefix(text):
-    # Is der Text gültig für das JSOn format?
-
-    # Wir entfernen alle Whitespaces am Ende
+def is_valid_json_prefix(text: str) -> bool:
+    """Return True if text could be a valid prefix of a JSON object."""
     text = text.strip()
-
-    if not text:  # Leerer Text ist gültig
+    if not text:
         return True
-
-    # Wir zählen die Klammern
-    open_braces = text.count("{")
-    close_braces = text.count("}")
-    open_brackets = text.count("[")
-    close_brackets = text.count("]")
-    open_quotes = text.count('"')
-
-    # Alle schließenden Klammern müssen geöffnet sein
-    if close_braces > open_braces or close_brackets > open_brackets:
+    if not text.startswith('{'):
         return False
-    # Quotes müssen paarweise sein
-    if open_quotes % 2 != 0:
-        pass  # Es ist ok wenn wir noch im string sind
-
-    # Versuche zu parsen, wenn es fehlt, ist es ein Prefix
+    if text.count('}') > text.count('{'):
+        return False
     try:
         json.loads(text)
-        return True  # Vollständig gültig
+        return True
     except json.JSONDecodeError as e:
-        # Es ist unvollständig, aber könnte ein gültiger Prefix sein
-        if "Expecting" in str(e) or "EOF" in str(e):
-            return True  # Gültiger Prefix
-        return False  # Ungültig
+        msg = str(e)
+        if 'EOF' in msg or 'Expecting' in msg or 'Unterminated' in msg:
+            return True
+        return False
+
+
+def matches_available_functions(text: str, functions_def: List[dict]) -> bool:
+    """Return True if the partial JSON is consistent with some available function name."""
+    if '"name"' not in text:
+        return True
+    available_names = [f['name'] for f in functions_def]
+    try:
+        idx = text.find('"name"')
+        after = text[idx + 6:].lstrip(' \t\n:')
+        if not after or after[0] != '"':
+            return True
+        after = after[1:]
+        if not after:
+            return True
+        if '"' in after:
+            name_val = after[:after.index('"')]
+            return name_val in available_names
+        for name in available_names:
+            if name.startswith(after):
+                return True
+        return False
+    except Exception:
+        return True
 
 
 def get_valid_tokens_for_json(
-    functions_def, generated_tokens, id_to_token, llm_model
-):
-    # Wir müssen sicherstellen, das die Tokens erlaubt sind
+    functions_def: List[dict],
+    generated_tokens: List[int],
+    id_to_token: dict,
+    llm_model,
+    logits: List[float],
+    top_k: int = 100
+) -> List[int]:
+    """Return token IDs that maintain valid JSON structure and schema compliance.
 
-    # Was haben wir bisher generiert?
-    current_text = llm_model.decode(generated_tokens)
-    valid_tokens = []
+    Uses the model's decode() method to get accurate token text, handling
+    BPE special characters (like Ġ for spaces) correctly.
+    """
+    current_text = llm_model.decode(generated_tokens) if generated_tokens else ""
+    logits_arr = np.array(logits)
+    top_k_ids = np.argsort(logits_arr)[-top_k:].tolist()
 
-    # Wir gehen alle tokens im Vocabular durch
-    for token_id, token_str in id_to_token.items():
+    valid_tokens: List[int] = []
+    for token_id in top_k_ids:
+        token_id = int(token_id)
+        token_text = _get_token_text(token_id, llm_model)
+        if not token_text:
+            continue
+        candidate_text = current_text + token_text
+        if (is_valid_json_prefix(candidate_text)
+                and matches_available_functions(candidate_text, functions_def)):
+            valid_tokens.append(token_id)
 
-        # Würde das Toknen in die JSON passen?
-        candidate_text = current_text + token_str
+    return valid_tokens if valid_tokens else [int(top_k_ids[-1])]
 
-        # Ist es noch Syntaktisch korrekt?
-        if is_valid_json_prefix(candidate_text):
-            # Stimmt es mit den verfügbaren Funktionen überein?
-            if matches_available_functions(candidate_text, functions_def):
-                valid_tokens.append(token_id)
 
-    return valid_tokens
+def load_vocab(llm_model) -> Dict[int, str]:
+    """Load vocabulary from model and return id→token mapping."""
+    vocab_path = llm_model.get_path_to_vocab_file()
+    with open(vocab_path, 'r') as f:
+        vocab = json.load(f)
+    return {v: k for k, v in vocab.items()}
