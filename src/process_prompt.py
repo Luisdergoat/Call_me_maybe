@@ -61,11 +61,15 @@ def _build_system_prompt(prompt: str, functions_def: List[dict]) -> str:
                 ex_params[pname] = True
             else:
                 ex_params[pname] = "example"
-        examples.append(json.dumps({"name": func['name'], "parameters": ex_params}))
+        examples.append(json.dumps(
+            {"name": func['name'], "parameters": ex_params}
+            ))
     examples_text = "\n".join(examples)
     return (
-        "You are a function calling system. Extract the function name and parameter "
-        "values directly from the user request. Output ONLY raw JSON, no markdown, "
+        "You are a function calling system."
+        "Extract the function name and parameter "
+        "values directly from the user request."
+        "Output ONLY raw JSON, no markdown, "
         "no explanation.\n\n"
         f"Available functions:\n{functions_text}\n\n"
         "Rules:\n"
@@ -73,7 +77,8 @@ def _build_system_prompt(prompt: str, functions_def: List[dict]) -> str:
         "- 'parameters': values extracted from the user request\n"
         "- For string params: use the exact text from the request\n"
         "- For number params: use the exact number from the request\n"
-        "- For regex params: write a valid regex pattern that matches the description\n\n"
+        "- For regex params: "
+        "write a valid regex pattern that matches the description\n\n"
         f"Example format:\n{examples_text}\n\n"
         f"User request: {prompt}\n"
         "JSON:"
@@ -84,7 +89,7 @@ def _coerce_types(
     parameters: Dict[str, Any],
     func_def: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Coerce parameter values to the types declared in the function definition."""
+
     result: Dict[str, Any] = {}
     for pname, pinfo in func_def['parameters'].items():
         ptype = pinfo.get('type', 'string')
@@ -108,7 +113,7 @@ def _fallback_extraction(
     text: str,
     functions_def: List[dict]
 ) -> Optional[Dict[str, Any]]:
-    """Extract a function call from text using regex when JSON parsing fails."""
+
     name_match = re.search(r'fn_\w+', text)
     if not name_match:
         return None
@@ -177,12 +182,16 @@ def process_prompt(
         try:
             result = json.loads(json_str)
             name = result.get("name", "")
-            func_def = next((f for f in functions_def if f['name'] == name), None)
+            func_def = next(
+                (f for f in functions_def if f['name'] == name), None
+                )
             if func_def:
                 return {
                     "prompt": prompt,
                     "name": name,
-                    "parameters": _coerce_types(result.get("parameters", {}), func_def)
+                    "parameters": _coerce_types(
+                        result.get("parameters", {}), func_def
+                        )
                 }
         except (json.JSONDecodeError, KeyError):
             pass

@@ -16,7 +16,8 @@ def main() -> None:
     print("=== Call Me Maybe: Natural Language to Function Calls ===\n")
     print("Processing prompts and generating function calls...\n")
     parser = argparse.ArgumentParser(
-        description="Translate natural language prompts into structured function calls."
+        description="Translate natural language prompts,"
+        "into structured function calls."
     )
     parser.add_argument(
         "--functions_definition",
@@ -61,11 +62,15 @@ def main() -> None:
                 continue
 
             try:
-                result = process_prompt(prompt, functions_def, llm_model, id_to_token)
+                result = process_prompt(
+                    prompt, functions_def, llm_model, id_to_token
+                    )
                 if result:
                     results.append(result)
             except Exception as e:
-                print(f"Error processing prompt '{prompt}': {e}", file=sys.stderr)
+                print(
+                    f"Error processing prompt '{prompt}': {e}", file=sys.stderr
+                    )
 
         out_dir = os.path.dirname(args.output)
         if out_dir:

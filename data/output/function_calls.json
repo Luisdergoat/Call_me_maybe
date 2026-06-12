@@ -62,8 +62,8 @@
     "name": "fn_substitute_string_with_regex",
     "parameters": {
       "source_string": "Hello 34 I'm 233 years old",
-      "regex": "34",
-      "replacement": "34"
+      "regex": "34 I'm 233",
+      "replacement": "NUMBERS"
     }
   },
   {

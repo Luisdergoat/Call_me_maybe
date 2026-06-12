@@ -58,18 +58,21 @@ class Input_reader:
             validated = [FunctionDef(**entry).model_dump() for entry in raw]
             self.available_functions = validated
         except FileNotFoundError:
-            print(f"Error: Functions file not found: {file_path}", file=sys.stderr)
+            print(f"Error: Functions file not found:"
+                  f"{file_path}", file=sys.stderr)
         except json.JSONDecodeError as e:
-            print(f"Error: Invalid JSON in functions file: {e}", file=sys.stderr)
+            print(f"Error: Invalid JSON in functions file:"
+                  f"{e}", file=sys.stderr)
         except ValidationError as e:
-            print(f"Error: Functions file schema invalid: {e}", file=sys.stderr)
+            print(f"Error: Functions file schema invalid:"
+                  f"{e}", file=sys.stderr)
 
     def read_input_out(self) -> None:
         """Read prompts from the default input path."""
-        default = Path(__file__).parent / "../data/input/function_calling_tests.json"
-        self.read_input(str(default))
+        d = Path(__file__).parent / "../data/input/function_calling_tests.json"
+        self.read_input(str(d))
 
     def check_available_functions(self) -> None:
         """Read function definitions from the default path."""
-        default = Path(__file__).parent / "../data/input/functions_definition.json"
-        self.read_functions(str(default))
+        d = Path(__file__).parent / "../data/input/functions_definition.json"
+        self.read_functions(str(d))

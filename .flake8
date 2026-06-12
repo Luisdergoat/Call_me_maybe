@@ -1,3 +1,2 @@
 [flake8]
-max-line-length = 88
-exclude = .venv,__pycache__,build,dist
+exclude = .venv,__pycache__,build,dist,llm_sdk

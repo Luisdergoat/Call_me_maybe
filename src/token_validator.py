@@ -1,6 +1,6 @@
 """Constrained decoding utilities for JSON function call generation."""
 import json
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import numpy as np
 
@@ -34,7 +34,7 @@ def is_valid_json_prefix(text: str) -> bool:
 
 
 def matches_available_functions(text: str, functions_def: List[dict]) -> bool:
-    """Return True if the partial JSON is consistent with some available function name."""
+
     if '"name"' not in text:
         return True
     available_names = [f['name'] for f in functions_def]
@@ -65,12 +65,10 @@ def get_valid_tokens_for_json(
     logits: List[float],
     top_k: int = 100
 ) -> List[int]:
-    """Return token IDs that maintain valid JSON structure and schema compliance.
 
-    Uses the model's decode() method to get accurate token text, handling
-    BPE special characters (like Ġ for spaces) correctly.
-    """
-    current_text = llm_model.decode(generated_tokens) if generated_tokens else ""
+    current_text = llm_model.decode(
+        generated_tokens
+        ) if generated_tokens else ""
     logits_arr = np.array(logits)
     top_k_ids = np.argsort(logits_arr)[-top_k:].tolist()
 
@@ -82,7 +80,9 @@ def get_valid_tokens_for_json(
             continue
         candidate_text = current_text + token_text
         if (is_valid_json_prefix(candidate_text)
-                and matches_available_functions(candidate_text, functions_def)):
+                and matches_available_functions(
+                    candidate_text, functions_def
+                    )):
             valid_tokens.append(token_id)
 
     return valid_tokens if valid_tokens else [int(top_k_ids[-1])]

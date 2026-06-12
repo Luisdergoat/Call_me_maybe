@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: lunsold <lunsold@student.42heilbronn.de    +#+  +:+       +#+         #
+#    By: luisunsold <luisunsold@student.42.fr>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/02/10 00:00:00 by luunsold          #+#    #+#              #
-#    Updated: 2026/06/10 14:26:55 by lunsold          ###   ########.fr        #
+#    Updated: 2026/06/12 09:50:46 by luisunsold       ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -98,7 +98,7 @@ lint: fclean
 # Show help
 help:
 	@echo "$(BLUE)╔══════════════════════════════════════════════════════════╗$(RESET)"
-	@echo "$(BLUE)║               Call_me_maybe  -  Makefile Commands               ║$(RESET)"
+	@echo "$(BLUE)║               Call_me_maybe  -  Makefile Commands        ║$(RESET)"
 	@echo "$(BLUE)╚══════════════════════════════════════════════════════════╝$(RESET)"
 	@echo ""
 	@echo "$(GREEN)Installation:$(RESET)"
