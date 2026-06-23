@@ -75,7 +75,11 @@ def _build_system_prompt(prompt: str, functions_def: List[dict]) -> str:
         "Rules:\n"
         "- 'name': exact function name from the list above\n"
         "- 'parameters': values extracted from the user request\n"
-        "- For string params: use the exact text from the request\n"
+        "- For string params: copy the EXACT text from the request\n"
+        "- For file paths: copy the COMPLETE path including all "
+        "slashes and filename (e.g. /home/user/data.json)\n"
+        "- For template strings: copy the ENTIRE template verbatim; "
+        "escape any embedded double quotes as \\\\\"\n"
         "- For number params: use the exact number from the request\n"
         "- For regex params: "
         "write a valid regex pattern that matches the description\n\n"
@@ -83,6 +87,9 @@ def _build_system_prompt(prompt: str, functions_def: List[dict]) -> str:
         f"User request: {prompt}\n"
         "JSON:"
     )
+
+
+_NUMERIC_TYPES = {'number', 'integer', 'float', 'int'}
 
 
 def _coerce_types(
@@ -95,8 +102,8 @@ def _coerce_types(
         ptype = pinfo.get('type', 'string')
         val = parameters.get(pname)
         if val is None:
-            result[pname] = 0.0 if ptype == 'number' else ""
-        elif ptype == 'number':
+            result[pname] = 0.0 if ptype in _NUMERIC_TYPES else ""
+        elif ptype in _NUMERIC_TYPES:
             try:
                 result[pname] = float(val)
             except (TypeError, ValueError):
@@ -105,6 +112,40 @@ def _coerce_types(
             result[pname] = bool(val)
         else:
             result[pname] = str(val)
+    return result
+
+
+def _looks_like_path(val: str) -> bool:
+    return bool(val) and (val.startswith('/') or (len(val) > 1 and val[1] == ':'))
+
+
+def _fix_string_params(
+    prompt: str,
+    parameters: Dict[str, Any],
+    func_def: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Patch parameters that the LLM extracted incorrectly from the prompt."""
+    result = dict(parameters)
+    for pname, pinfo in func_def['parameters'].items():
+        if pinfo.get('type', 'string') != 'string':
+            continue
+        val = str(result.get(pname, ''))
+
+        if 'path' in pname.lower() or 'file' in pname.lower():
+            if not _looks_like_path(val):
+                m = re.search(r'([A-Za-z]:\\[^\s,]+|/[^\s,]+)', prompt)
+                if m:
+                    result[pname] = m.group(0)
+
+        if 'template' in pname.lower():
+            m = re.search(
+                r'[Tt]emplate\s*:\s*(.+)$', prompt, re.DOTALL
+            )
+            if m:
+                extracted = m.group(1).strip()
+                if len(extracted) > len(val):
+                    result[pname] = extracted
+
     return result
 
 
@@ -127,14 +168,14 @@ def _fallback_extraction(
     num_idx = str_idx = 0
     for pname, pinfo in func_def['parameters'].items():
         ptype = pinfo.get('type', 'string')
-        if ptype == 'number' and num_idx < len(numbers):
+        if ptype in _NUMERIC_TYPES and num_idx < len(numbers):
             parameters[pname] = float(numbers[num_idx])
             num_idx += 1
         elif ptype == 'string' and str_idx < len(strings):
             parameters[pname] = strings[str_idx]
             str_idx += 1
         else:
-            parameters[pname] = 0.0 if ptype == 'number' else ""
+            parameters[pname] = 0.0 if ptype in _NUMERIC_TYPES else ""
     return {"prompt": prompt, "name": name, "parameters": parameters}
 
 
@@ -186,15 +227,27 @@ def process_prompt(
                 (f for f in functions_def if f['name'] == name), None
                 )
             if func_def:
+                coerced = _coerce_types(
+                    result.get("parameters", {}), func_def
+                )
                 return {
                     "prompt": prompt,
                     "name": name,
-                    "parameters": _coerce_types(
-                        result.get("parameters", {}), func_def
-                        )
+                    "parameters": _fix_string_params(
+                        prompt, coerced, func_def
+                    )
                 }
         except (json.JSONDecodeError, KeyError):
             pass
 
     print("JSON parse failed, trying regex fallback...")
-    return _fallback_extraction(prompt, raw_text, functions_def)
+    fallback = _fallback_extraction(prompt, raw_text, functions_def)
+    if fallback:
+        func_def = next(
+            (f for f in functions_def if f['name'] == fallback['name']), None
+        )
+        if func_def:
+            fallback['parameters'] = _fix_string_params(
+                prompt, fallback['parameters'], func_def
+            )
+    return fallback

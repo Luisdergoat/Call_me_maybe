@@ -6,7 +6,7 @@
 #    By: luisunsold <luisunsold@student.42.fr>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2026/02/10 00:00:00 by luunsold          #+#    #+#              #
-#    Updated: 2026/06/12 09:50:46 by luisunsold       ###   ########.fr        #
+#    Updated: 2026/06/23 15:08:45 by luisunsold       ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -21,7 +21,6 @@ RESET	= \033[0m
 VENV		= venv
 PYTHON		= $(VENV)/bin/python3
 DEBUG_MODE	= $(VENV)/bin/python3 -m pdb
-PIP			= $(VENV)/bin/pip
 ACTIVATE	= source $(VENV)/bin/activate
 
 lint1		= flake8 .
@@ -35,21 +34,22 @@ MAIN		= Call_me_maybe.py
 # ================================ TARGETS ================================= #
 
 all: install
-# Need the config as arg as well
+
+# Check if uv is installed and up to date
+	@echo "$(GREEN)✅ uv ready: $$(uv --version)$(RESET)"
+# Create virtual environment with uv
+$(VENV)/bin/activate: uv-update
+	@echo "$(BLUE)🔧 Creating virtual environment...$(RESET)"
+	@uv venv $(VENV)
+	@echo "$(GREEN)✅ Virtual environment created!$(RESET)"
+
 # Install dependencies in virtual environment
 install: $(VENV)/bin/activate requirements.txt
 	@echo "$(BLUE)📦 Installing dependencies...$(RESET)"
-	@$(PIP) install --upgrade pip
-	@$(PIP) install -r requirements.txt
+	@uv pip install --python $(PYTHON) -r requirements.txt
 	@echo "$(GREEN)✅ Dependencies installed successfully!$(RESET)"
 	@echo "$(YELLOW)💡 Virtual environment created at: $(VENV)$(RESET)"
 	@echo "$(BLUE)📝 Start the programm with make run"
-
-# Create virtual environment
-$(VENV)/bin/activate:
-	@echo "$(BLUE)🔧 Creating virtual environment...$(RESET)"
-	@python3 -m venv $(VENV)
-	@echo "$(GREEN)✅ Virtual environment created!$(RESET)"
 
 # Create requirements.txt if it doesn't exist
 requirements.txt:
@@ -116,4 +116,4 @@ help:
 %:
 	@true
 
-.PHONY: all install run clean fclean re help activate
+.PHONY: all uv-update install run debug clean fclean re lint help activate
